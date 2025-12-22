@@ -84,14 +84,34 @@ graph TD
 
 ### Installation
 
-#### Option 1: Using run.bat (Windows - Recommended)
+#### Option 1: Using Quick Start Scripts (Recommended)
 
-Simply double-click `run.bat` - it will automatically:
+It provides automated scripts to handle environment setup, dependency installation, and launching the application in one go.
 
-1. Create a virtual environment
-2. Install all dependencies
-3. Install Playwright browsers
-4. Launch the application
+**For Windows:**
+Simply double-click `run.bat`.
+
+**For macOS / Linux:**
+Run the `start.sh` script from your terminal.
+
+1.  **Grant execution permission** (first time only):
+    ```bash
+    chmod +x start.sh
+    ```
+
+2.  **Run the script**:
+    ```bash
+    ./start.sh
+    ```
+
+The script will automatically:
+- Create a virtual environment
+- Install all dependencies (requirements.txt)
+- Install Playwright browsers
+- Launch the Social Bot
+
+#### Option 2: Manual Setup
+... (Keep existing manual setup instructions)
 
 #### Option 2: Manual Setup
 
@@ -180,6 +200,7 @@ Social Bot/
 ├── config.py               # Configuration (Pydantic Settings)
 ├── requirements.txt        # Python dependencies
 ├── run.bat                 # Windows startup script
+├── start.sh                # macOS/Linux startup script
 ├── .env                    # Environment variables (create this)
 │
 ├── core/                   # Core modules
@@ -319,14 +340,31 @@ If you choose to use this software, please:
 
 ### 安裝方式
 
-#### 方式一：使用 run.bat（Windows - 推薦）
+#### 方式一：使用快速啟動腳本（推薦）
 
-直接雙擊 `run.bat`，它會自動：
+本專案提供了自動化腳本，可一次完成環境建置、套件安裝與程式啟動。
 
-1. 建立虛擬環境
-2. 安裝所有依賴套件
-3. 安裝 Playwright 瀏覽器
-4. 啟動應用程式
+**Windows 使用者：**
+直接雙擊 `run.bat` 即可。
+
+**macOS / Linux 使用者：**
+請在終端機執行 `start.sh` 腳本。
+
+1.  **給予執行權限**（僅首次需要）：
+    ```bash
+    chmod +x start.sh
+    ```
+
+2.  **執行腳本**：
+    ```bash
+    ./start.sh
+    ```
+
+該腳本將自動執行以下動作：
+- 建立虛擬環境
+- 安裝所有依賴套件 (requirements.txt)
+- 安裝 Playwright 瀏覽器核心
+- 啟動 Social Bot 應用程式
 
 #### 方式二：手動設定
 
