@@ -5,6 +5,7 @@ import logging
 import asyncio
 import random
 import base64
+from typing import List, Dict
 
 logger = logging.getLogger(__name__)
 
@@ -46,7 +47,7 @@ class InstagramAdapter(BaseAdapter):
                 logger.error("Login timeout.")
                 raise e
 
-    async def get_feed(self):
+    async def get_feed(self) -> List[Dict]:
         page = self.browser.page
         posts_data = []
 
@@ -89,20 +90,155 @@ class InstagramAdapter(BaseAdapter):
                     "content": content,
                     "image": image_b64,
                     "author": "unknown",
-                    "element": article
+                    "element": article,
+                    "_locator": article
                 })
             except Exception as e:
                 logger.warning(f"Failed to parse post {i}: {e}")
                 
         return posts_data
 
-    async def reply(self, post, comment):
+    async def get_notifications(self) -> List[Dict]:
+        """
+        獲取 Instagram 官方帳號的通知/留言
+        """
+        page = self.browser.page
+        logger.info(" [Instagram] Navigating to Notifications...")
+
+        try:
+            # Click on notifications icon or navigate directly
+            notif_nav = page.locator(selectors.IG_ACTIVITY_NAV).first
+            if await notif_nav.count() > 0:
+                await notif_nav.click()
+                await self._human_delay(2, 3)
+            else:
+                # Direct navigation fallback
+                await page.goto(f"{self.base_url}/notifications/", timeout=30000)
+                await self._human_delay(2, 3)
+
+            notifications = []
+            
+            # Wait for notification items
+            try:
+                await page.wait_for_selector(selectors.IG_NOTIFICATION_ITEM, timeout=10000)
+            except:
+                logger.warning(" [Instagram] No notifications found or page structure changed.")
+                return []
+
+            items = await page.locator(selectors.IG_NOTIFICATION_ITEM).all()
+            logger.info(f" [Instagram] Found {len(items)} notification items.")
+
+            for i, item in enumerate(items[:10]):
+                try:
+                    if not await item.is_visible():
+                        continue
+
+                    full_text = await item.inner_text()
+                    
+                    # Determine notification type
+                    notif_type = "unknown"
+                    if "commented" in full_text.lower() or "留言" in full_text:
+                        notif_type = "comment"
+                    elif "mentioned" in full_text.lower() or "提及" in full_text:
+                        notif_type = "mention"
+                    elif "replied" in full_text.lower() or "回覆" in full_text:
+                        notif_type = "reply"
+                    elif "liked" in full_text.lower() or "喜歡" in full_text:
+                        notif_type = "like"
+                        continue  # Skip likes
+
+                    notif_id = f"ig_notif_{i}_{hash(full_text[:50])}"
+
+                    notifications.append({
+                        'id': notif_id,
+                        'type': notif_type,
+                        'content': full_text[:200],
+                        'author': 'unknown',
+                        'post_id': None,
+                        'element': item,
+                        '_locator': item
+                    })
+
+                except Exception as e:
+                    logger.warning(f" [Instagram] Failed to parse notification {i}: {e}")
+                    continue
+
+            logger.info(f" [Instagram] Parsed {len(notifications)} actionable notifications.")
+            return notifications
+
+        except Exception as e:
+            logger.error(f" [Instagram] Error fetching notifications: {e}")
+            return []
+
+    async def reply_to_comment(self, notification: Dict, comment: str):
+        """
+        回覆 Instagram 上的特定留言通知
+        """
+        page = self.browser.page
+        notif_id = notification.get('id')
+        logger.info(f" [Instagram] Replying to notification {notif_id}...")
+
+        if settings.dry_run:
+            logger.info(f" [Instagram] [DRY_RUN] Would reply with: '{comment}'")
+            return True
+
+        item = notification.get('_locator') or notification.get('element')
+        
+        if not item:
+            logger.error(" [Instagram] No locator found. Cannot reply.")
+            return False
+
+        try:
+            # Click on the notification to open context
+            await item.scroll_into_view_if_needed()
+            await item.click()
+            await self._human_delay(1.5, 2.5)
+
+            # Look for reply input
+            textarea = page.locator(selectors.IG_REPLY_TEXTAREA).first
+
+            if await textarea.count() == 0:
+                # Try clicking reply button first
+                reply_btn = page.locator(selectors.IG_NOTIFICATION_REPLY_BTN).first
+                if await reply_btn.count() > 0:
+                    await reply_btn.click()
+                    await self._human_delay(1, 2)
+                    textarea = page.locator(selectors.IG_REPLY_TEXTAREA).first
+
+            if await textarea.count() == 0:
+                logger.error(" [Instagram] Reply textarea not found.")
+                return False
+
+            await textarea.click()
+            await self._human_delay(0.5, 1)
+
+            # Type comment
+            await page.keyboard.type(comment, delay=random.randint(50, 150))
+            await self._human_delay(1, 2)
+
+            # Click post button
+            post_btn = page.locator(selectors.IG_REPLY_POST_BTN).last
+
+            if await post_btn.count() > 0 and await post_btn.is_visible():
+                await post_btn.click()
+                logger.info(" [Instagram] Reply sent successfully!")
+                await self._human_delay(2, 3)
+                return True
+            else:
+                logger.error(" [Instagram] Post button not found.")
+                return False
+
+        except Exception as e:
+            logger.error(f" [Instagram] Error replying to notification: {e}")
+            return False
+
+    async def reply(self, post: Dict, comment: str):
         logger.info(f"Preparing to reply to {post['id']}...")
         if settings.dry_run:
             logger.info(f"[DRY_RUN] Would click Reply on post and type: '{comment}'")
             return
 
-        article = post['element']
+        article = post.get('element') or post.get('_locator')
         page = self.browser.page
         
         # 1. Scroll into view
@@ -167,4 +303,3 @@ class InstagramAdapter(BaseAdapter):
             await self._human_delay(3, 5)
         except Exception as e:
             logger.error(f"Failed to reply: {e}")
-

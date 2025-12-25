@@ -41,6 +41,145 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+async def run_feed_mode(adapter, brain, db):
+    """
+    Feed browsing mode - scans feed and replies to random posts.
+    """
+    logger.info("Starting feed monitor loop... (Press Ctrl+C to stop)")
+    
+    consecutive_errors = 0
+    max_consecutive_errors = 3
+
+    while True:
+        posts_replied = 0
+        posts = await adapter.get_feed()
+        
+        if not posts:
+            logger.warning("   No posts found in this scan. Retrying in 10s...")
+            await asyncio.sleep(10)
+            continue
+
+        for post in posts:
+            if consecutive_errors >= max_consecutive_errors:
+                logger.error("❌ Too many consecutive errors. Stopping session.")
+                return
+
+            try:
+                post_id = post['id']
+                if await db.is_replied(post_id):
+                    logger.info(f"Skipping already replied post: {post_id}")
+                    continue
+                    
+                logger.info(f"Analyzing post: {post_id}")
+                
+                image_data = post.get('image')
+                if image_data:
+                    logger.info("   📸 Image detected! Sending visual data to brain...")
+                else:
+                    logger.info("   📄 Text only.")
+
+                comment = await brain.generate_comment(post['content'], image_base64=image_data)
+                
+                await adapter.reply(post, comment)
+                await db.add_reply(post_id, comment)
+                posts_replied += 1
+                
+                consecutive_errors = 0
+                await asyncio.sleep(settings.min_delay_seconds)
+            except Exception as e:
+                consecutive_errors += 1
+                logger.error(f"⚠️  Error processing post {post.get('id', 'unknown')}: {e}")
+                
+                if "insufficient_quota" in str(e) or "429" in str(e):
+                    logger.critical("🚨 API QUOTA EXCEEDED. Stopping.")
+                    return
+                
+                logger.info(f"   Skipping... (Consecutive Errors: {consecutive_errors})")
+                await asyncio.sleep(2)
+                continue
+        
+        if posts_replied > 0:
+            logger.info(f"✨ Cycle complete. Replied to {posts_replied} posts. Refreshing...")
+            await adapter.refresh_feed()
+            await asyncio.sleep(5)
+
+async def run_notification_mode(adapter, brain, db):
+    """
+    Notification/Comment mode - monitors notifications and replies to comments on your posts.
+    """
+    logger.info("Starting notification monitor loop... (Press Ctrl+C to stop)")
+    
+    consecutive_errors = 0
+    max_consecutive_errors = 3
+
+    while True:
+        notifications_replied = 0
+        
+        try:
+            notifications = await adapter.get_notifications()
+        except Exception as e:
+            logger.error(f"Error fetching notifications: {e}")
+            await asyncio.sleep(30)
+            continue
+        
+        if not notifications:
+            logger.info("   No actionable notifications. Checking again in 30s...")
+            await asyncio.sleep(30)
+            continue
+
+        for notif in notifications:
+            if consecutive_errors >= max_consecutive_errors:
+                logger.error("❌ Too many consecutive errors. Stopping session.")
+                return
+
+            try:
+                notif_id = notif['id']
+                notif_type = notif.get('type', 'unknown')
+                
+                if await db.is_replied(notif_id):
+                    logger.info(f"Skipping already replied notification: {notif_id}")
+                    continue
+                
+                # Only reply to comments, replies, and mentions
+                if notif_type not in ['comment', 'reply', 'mention']:
+                    logger.info(f"Skipping {notif_type} notification: {notif_id}")
+                    continue
+                    
+                logger.info(f"Processing {notif_type} notification: {notif_id}")
+                
+                # Generate reply
+                comment = await brain.generate_comment(notif['content'])
+                
+                # Send reply
+                success = await adapter.reply_to_comment(notif, comment)
+                
+                if success:
+                    await db.add_reply(notif_id, comment)
+                    notifications_replied += 1
+                    consecutive_errors = 0
+                else:
+                    logger.warning(f"   Failed to reply to {notif_id}")
+                
+                await asyncio.sleep(settings.min_delay_seconds)
+                
+            except Exception as e:
+                consecutive_errors += 1
+                logger.error(f"⚠️  Error processing notification: {e}")
+                
+                if "insufficient_quota" in str(e) or "429" in str(e):
+                    logger.critical("🚨 API QUOTA EXCEEDED. Stopping.")
+                    return
+                
+                logger.info(f"   Skipping... (Consecutive Errors: {consecutive_errors})")
+                await asyncio.sleep(2)
+                continue
+        
+        if notifications_replied > 0:
+            logger.info(f"✨ Cycle complete. Replied to {notifications_replied} notifications.")
+        
+        # Wait before next check
+        await asyncio.sleep(30)
+
 async def main():
     logger.info(f"Starting Social Bot MVP (Dry Run: {settings.dry_run})")
     
@@ -68,6 +207,15 @@ async def main():
         settings.platform = "threads"
     print(f"✅ Selected Platform: {settings.platform.upper()}")
 
+    # --- Interactive Operation Mode Selection ---
+    print("\n📋 Select Operation Mode:")
+    print("1. Feed Mode (Browse feed, reply to random posts)")
+    print("2. Notification Mode (Monitor comments on YOUR posts, auto-reply)")
+    mode_choice = input("Enter choice (1-2) [1]: ").strip()
+    
+    operation_mode = "notification" if mode_choice == "2" else "feed"
+    print(f"✅ Selected Mode: {operation_mode.upper()}")
+
     # --- Interactive Provider Selection ---
     print("\nSelect LLM Provider:")
     print("1. OpenAI (Default)")
@@ -90,7 +238,6 @@ async def main():
     elif choice == "3":
         settings.llm_provider = "ollama"
         try:
-            # Clean up base URL for standard API calls if needed
             api_base = settings.ollama_base_url.replace("/v1", "")
             print(f"   🔍 Fetching models from {api_base}...")
             
@@ -136,7 +283,6 @@ async def main():
     db = Database()
     await db.init_db()
 
-    
     brain = BotBrain()
     browser = BrowserEngine()
     
@@ -151,72 +297,12 @@ async def main():
         await browser.start()
         await adapter.login()
         
-        
-        # Continuous Loop
-        logger.info("Starting feed monitor loop... (Press Ctrl+C to stop)")
-        
-        consecutive_errors = 0
-        max_consecutive_errors = 3
-
-        while True:
-            posts_replied = 0  # Track replies in this cycle
-            posts = await adapter.get_feed()
+        # Run selected mode
+        if operation_mode == "notification":
+            await run_notification_mode(adapter, brain, db)
+        else:
+            await run_feed_mode(adapter, brain, db)
             
-            if not posts:
-                logger.warning("   No posts found in this scan. Retrying in 10s...")
-                await asyncio.sleep(10)
-                continue
-
-            for post in posts:
-                if consecutive_errors >= max_consecutive_errors:
-                    logger.error("❌ Too many consecutive errors (likely API quota or connection issue). Stopping session.")
-                    break
-
-                try:
-                    post_id = post['id']
-                    if await db.is_replied(post_id):
-                        logger.info(f"Skipping already replied post: {post_id}")
-                        continue
-                        
-                    logger.info(f"Analyzing post: {post_id}")
-                    
-                    # Check for image
-                    image_data = post.get('image')
-                    if image_data:
-                        logger.info("   📸 Image detected! Sending visual data to brain...")
-                    else:
-                        logger.info("   📄 Text only.")
-
-                    comment = await brain.generate_comment(post['content'], image_base64=image_data)
-                    
-                    await adapter.reply(post, comment)
-                    await db.add_reply(post_id, comment)
-                    posts_replied += 1
-                    
-                    # Success - reset counter
-                    consecutive_errors = 0
-                    
-                    # Rate limiting
-                    await asyncio.sleep(settings.min_delay_seconds)
-                except Exception as e:
-                    consecutive_errors += 1
-                    logger.error(f"⚠️  Error processing post {post.get('id', 'unknown')}: {e}")
-                    
-                    # Check for critical quota errors
-                    if "insufficient_quota" in str(e) or "429" in str(e):
-                        logger.critical("🚨 API QUOTA EXCEEDED. Stopping to prevent billing issues.")
-                        break
-                    
-                    logger.info(f"   Skipping to next post... (Consecutive Errors: {consecutive_errors})")
-                    await asyncio.sleep(2) # Short penalty wait
-                    await asyncio.sleep(2) # Short penalty wait
-                    continue
-            
-            # --- Global Auto-Refresh Logic ---
-            if posts_replied > 0:
-                logger.info(f"✨ Cycle complete. Replied to {posts_replied} posts. Refreshing feed for new content...")
-                await adapter.refresh_feed()
-                await asyncio.sleep(5) # Wait for reload
     except Exception as e:
         logger.error(f"Fatal error: {e}", exc_info=True)
     finally:
@@ -224,3 +310,4 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
+

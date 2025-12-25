@@ -31,3 +31,23 @@ IG_REPLY_BUTTON = "svg[aria-label*='Comment'], svg[aria-label*='留言'], svg[ar
 IG_REPLY_TEXTAREA = "textarea, div[contenteditable='true'][role='textbox']"
 # Broadened Post button selector to catch links/spans/divs without role='button'
 IG_REPLY_POST_BTN = "div[role='button']:has-text('Post'), div[role='button']:has-text('發佈'), div[role='button']:has-text('發布'), button:has-text('Post'), button:has-text('發佈'), button:has-text('發布'), div:has-text('Post'), div:has-text('發佈'), div:has-text('發布'), span:has-text('Post'), span:has-text('發佈'), span:has-text('發布')"
+
+# --- Threads Notification Selectors ---
+THREADS_ACTIVITY_NAV = "a[href='/activity'], svg[aria-label='Activity'], svg[aria-label='動態']"
+THREADS_NOTIFICATION_ITEM = "div[role='listitem'], div[data-pressable-container='true']"
+THREADS_NOTIFICATION_CONTENT = "span[dir='auto'], div[dir='auto']"
+THREADS_NOTIFICATION_REPLY_BTN = "div[role='button']:has-text('Reply'), div[role='button']:has-text('回覆')"
+
+# --- Instagram Notification Selectors ---
+IG_ACTIVITY_NAV = "svg[aria-label='Notifications'], svg[aria-label='通知'], a[href='/notifications/']"
+IG_NOTIFICATION_ITEM = "div[role='listitem'], article"
+IG_NOTIFICATION_CONTENT = "span, div[dir='auto']"
+IG_NOTIFICATION_REPLY_BTN = "button:has-text('Reply'), div[role='button']:has-text('Reply'), div[role='button']:has-text('回覆')"
+
+# --- Facebook Notification Selectors ---
+FB_NOTIFICATION_NAV = "a[href*='/notifications'], div[aria-label='Notifications'], div[aria-label='通知']"
+FB_NOTIFICATION_ITEM = "div[role='article'], div[data-visualcompletion='ignore-dynamic']"
+FB_NOTIFICATION_CONTENT = "span[dir='auto'], div[dir='auto']"
+FB_COMMENT_INPUT = "div[role='textbox'][contenteditable='true'], div[contenteditable='true'][aria-label*='comment'], div[contenteditable='true'][aria-label*='留言']"
+FB_COMMENT_SUBMIT = "div[role='button'][aria-label='Submit'], div[role='button'][aria-label='Post'], div[role='button'][aria-label='發布'], form div[role='button']"
+

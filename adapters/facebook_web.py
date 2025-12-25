@@ -1,6 +1,8 @@
 from .base import BaseAdapter
 import logging
 import asyncio
+import random
+from typing import List, Dict
 from playwright.async_api import TimeoutError
 from . import selectors
 
@@ -20,6 +22,9 @@ class FacebookAdapter(BaseAdapter):
             pass
         except:
             pass
+
+    async def _human_delay(self, min_s=1.0, max_s=3.0):
+        await asyncio.sleep(random.uniform(min_s, max_s))
 
     async def login(self):
         """
@@ -58,7 +63,7 @@ class FacebookAdapter(BaseAdapter):
             
         logger.warning("⚠️ Login timeout or not detected. Proceeding anyway (might fail).")
 
-    async def get_feed(self):
+    async def get_feed(self) -> List[Dict]:
         """
         Scrapes posts. Handles black screen loop by periodically dismissing overlays.
         """
@@ -114,7 +119,8 @@ class FacebookAdapter(BaseAdapter):
                             'id': post_id,
                             'content': clean_content,
                             'platform': 'facebook',
-                            'element': article
+                            'element': article,
+                            '_locator': article
                         }
                         if images:
                             post_data['images'] = images[:2] # Limit to 2 images
@@ -131,13 +137,140 @@ class FacebookAdapter(BaseAdapter):
         logger.info(f"Found {len(posts)} posts.")
         return posts
 
-    async def reply(self, post, comment):
+    async def get_notifications(self) -> List[Dict]:
+        """
+        獲取 Facebook 官方帳號/粉專的通知
+        """
+        page = self.browser.page
+        logger.info(" [Facebook] Navigating to Notifications...")
+
+        try:
+            # Click on notifications icon or navigate directly
+            notif_nav = page.locator(selectors.FB_NOTIFICATION_NAV).first
+            if await notif_nav.count() > 0:
+                await notif_nav.click()
+                await self._human_delay(2, 3)
+            else:
+                # Direct navigation fallback
+                await page.goto("https://www.facebook.com/notifications", timeout=30000)
+                await self._human_delay(2, 3)
+
+            notifications = []
+            
+            # Wait for notification items
+            try:
+                await page.wait_for_selector(selectors.FB_NOTIFICATION_ITEM, timeout=10000)
+            except:
+                logger.warning(" [Facebook] No notifications found or page structure changed.")
+                return []
+
+            items = await page.locator(selectors.FB_NOTIFICATION_ITEM).all()
+            logger.info(f" [Facebook] Found {len(items)} notification items.")
+
+            for i, item in enumerate(items[:10]):
+                try:
+                    if not await item.is_visible():
+                        continue
+
+                    full_text = await item.inner_text()
+                    
+                    # Determine notification type
+                    notif_type = "unknown"
+                    if "commented" in full_text.lower() or "留言" in full_text or "回應" in full_text:
+                        notif_type = "comment"
+                    elif "mentioned" in full_text.lower() or "提及" in full_text or "標記" in full_text:
+                        notif_type = "mention"
+                    elif "replied" in full_text.lower() or "回覆" in full_text:
+                        notif_type = "reply"
+                    elif "reacted" in full_text.lower() or "心情" in full_text or "對你的" in full_text:
+                        notif_type = "reaction"
+                        continue  # Skip reactions
+
+                    notif_id = f"fb_notif_{i}_{hash(full_text[:50])}"
+
+                    notifications.append({
+                        'id': notif_id,
+                        'type': notif_type,
+                        'content': full_text[:200],
+                        'author': 'unknown',
+                        'post_id': None,
+                        'element': item,
+                        '_locator': item
+                    })
+
+                except Exception as e:
+                    logger.warning(f" [Facebook] Failed to parse notification {i}: {e}")
+                    continue
+
+            logger.info(f" [Facebook] Parsed {len(notifications)} actionable notifications.")
+            return notifications
+
+        except Exception as e:
+            logger.error(f" [Facebook] Error fetching notifications: {e}")
+            return []
+
+    async def reply_to_comment(self, notification: Dict, comment: str):
+        """
+        回覆 Facebook 上的特定留言通知
+        """
+        page = self.browser.page
+        notif_id = notification.get('id')
+        logger.info(f" [Facebook] Replying to notification {notif_id}...")
+
+        item = notification.get('_locator') or notification.get('element')
+        
+        if not item:
+            logger.error(" [Facebook] No locator found. Cannot reply.")
+            return False
+
+        try:
+            # Click on the notification to open context
+            await item.scroll_into_view_if_needed()
+            await item.click()
+            await self._human_delay(2, 3)
+
+            # Look for comment input box
+            input_box = page.locator(selectors.FB_COMMENT_INPUT).first
+
+            if await input_box.count() == 0:
+                # Alternative selectors
+                input_box = page.locator('div[role="textbox"][contenteditable="true"]').first
+
+            if await input_box.count() == 0:
+                logger.error(" [Facebook] Comment input not found.")
+                return False
+
+            await input_box.click()
+            await self._human_delay(0.5, 1)
+
+            # Type comment
+            await input_box.fill(comment)
+            await self._human_delay(1, 2)
+
+            # Try Enter key first
+            await input_box.press("Enter")
+            await self._human_delay(1, 2)
+
+            # Check if we need to click submit button
+            submit_btn = page.locator(selectors.FB_COMMENT_SUBMIT).first
+            if await submit_btn.count() > 0 and await submit_btn.is_visible():
+                await submit_btn.click()
+
+            logger.info(" [Facebook] Reply sent successfully!")
+            await self._human_delay(2, 3)
+            return True
+
+        except Exception as e:
+            logger.error(f" [Facebook] Error replying to notification: {e}")
+            return False
+
+    async def reply(self, post: Dict, comment: str):
         """
         Replies to a Facebook post.
         """
         logger.info(f"Replying to {post['id']}...")
         try:
-            article = post['element']
+            article = post.get('element') or post.get('_locator')
             
             # Method 1: Click "Comment" button
             # Expanded selectors for Chinese/English
@@ -202,4 +335,3 @@ class FacebookAdapter(BaseAdapter):
                 
         except Exception as e:
             logger.error(f"Failed to reply to FB post: {e}")
-

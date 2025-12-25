@@ -3,18 +3,95 @@
 <div align="center">
 
 ![Status](https://img.shields.io/badge/Status-🚧_Under_Development-orange?style=for-the-badge)
-![Python](https://img.shields.io/badge/Python-3.10+-blue?style=for-the-badge&logo=python)
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
 </div>
 
----
+> ⚠️ **UNDER ACTIVE DEVELOPMENT** - This project is currently in early development. Features may be incomplete, unstable, or subject to significant changes. **Use at your own risk.**
 
 # Social Bot
 
-> ⚠️ **UNDER ACTIVE DEVELOPMENT** - This project is currently in early development. Features may be incomplete, unstable, or subject to significant changes. **Use at your own risk.**
-
 **Social Bot** is an automated social media interaction agent designed to fully automate the reply workflows of community managers. Leveraging Playwright, this project integrates with diverse Large Language Model (LLM) providers (OpenAI, Google Gemini, Ollama) to comprehend content—including visual analysis of post images—and automatically generate responses.
+
+## Architecture
+
+```mermaid
+graph TD
+    A[main.py] --> B[BrowserEngine]
+    A --> C[BotBrain]
+    A --> D[Database]
+    A --> E[PlatformAdapterFactory]
+    
+    E --> F[ThreadsAdapter]
+    E --> G[InstagramAdapter]
+    E --> H[FacebookAdapter]
+    E --> I[XAdapter]
+    
+    C --> J[OpenAI Provider]
+    C --> K[Google Provider]
+    C --> L[Ollama Provider]
+```
+
+## Project Structure
+
+```
+Social Bot/
+├── main.py                 # Entry point & main loop
+├── config.py               # Configuration (Pydantic Settings)
+├── requirements.txt        # Python dependencies
+├── run.bat                 # Windows startup script
+├── start.sh                # macOS/Linux startup script
+├── .env                    # Environment variables (create this)
+│
+├── core/                   # Core modules
+│   ├── brain.py            # LLM integration (OpenAI/Google/Ollama)
+│   ├── browser.py          # Playwright browser engine
+│   ├── db.py               # SQLite database for tracking replies
+│   └── factory.py          # Platform adapter factory
+│
+├── adapters/               # Platform-specific adapters
+│   ├── base.py             # Abstract base adapter
+│   ├── threads_web.py      # Threads implementation
+│   ├── instagram_web.py    # Instagram implementation
+│   ├── facebook_web.py     # Facebook implementation
+│   ├── x_web.py            # X/Twitter implementation
+│   ├── line_web.py         # Line (placeholder)
+│   ├── whatsapp_web.py     # WhatsApp (placeholder)
+│   └── selectors.py        # CSS selectors for all platforms
+│
+└── data/                   # Runtime data
+    ├── browser_context/    # Persistent browser session
+    ├── bot.log             # Application logs
+    └── replied.db          # SQLite database
+```
+
+
+## Development TODO
+
+> **Development Roadmap** - Tracked features and planned work
+
+### Phase 1: Enhance Existing Platforms ✅ Complete
+
+- [x] **Threads**: Official account auto-reply (notification monitoring)
+- [x] **Instagram**: Official account auto-reply (comment monitoring)
+- [x] **Facebook**: Official account auto-reply (page comment monitoring)
+- [x] Add `get_notifications()` method to BaseAdapter
+- [x] Add `reply_to_comment()` method to BaseAdapter
+- [x] Add operation mode selection in main.py (Feed Mode / Notification Mode)
+
+### Phase 2: New Platform - Line
+
+- [ ] Line Web login (QR Code)
+- [ ] Line Voom feed scraping
+- [ ] Line reply functionality
+- [ ] Line CSS selectors
+
+### Phase 3: New Platform - WhatsApp (Last Priority)
+
+- [ ] WhatsApp Business API integration (official accounts only)
+- [ ] Webhook setup for incoming messages
+- [ ] Auto-reply via Business API
+- [ ] ⚠️ **NOT for personal accounts** - Business accounts only
 
 ## Table of Contents
 
@@ -55,25 +132,6 @@
   - Dry-Run mode (simulation only, no actual posting)
   - Consecutive error handling with automatic stop
 - **Cross-Platform**: Optimized for Windows, macOS, and Linux environments.
-
-## Architecture
-
-```mermaid
-graph TD
-    A[main.py] --> B[BrowserEngine]
-    A --> C[BotBrain]
-    A --> D[Database]
-    A --> E[PlatformAdapterFactory]
-    
-    E --> F[ThreadsAdapter]
-    E --> G[InstagramAdapter]
-    E --> H[FacebookAdapter]
-    E --> I[XAdapter]
-    
-    C --> J[OpenAI Provider]
-    C --> K[Google Provider]
-    C --> L[Ollama Provider]
-```
 
 ## Quick Start
 
@@ -209,69 +267,6 @@ By default, `DRY_RUN=true` is enabled. In this mode:
 - **No actual comments will be posted**
 - Useful for testing and verifying behavior before going live
 
-## Project Structure
-
-```
-Social Bot/
-├── main.py                 # Entry point & main loop
-├── config.py               # Configuration (Pydantic Settings)
-├── requirements.txt        # Python dependencies
-├── run.bat                 # Windows startup script
-├── start.sh                # macOS/Linux startup script
-├── .env                    # Environment variables (create this)
-│
-├── core/                   # Core modules
-│   ├── brain.py            # LLM integration (OpenAI/Google/Ollama)
-│   ├── browser.py          # Playwright browser engine
-│   ├── db.py               # SQLite database for tracking replies
-│   └── factory.py          # Platform adapter factory
-│
-├── adapters/               # Platform-specific adapters
-│   ├── base.py             # Abstract base adapter
-│   ├── threads_web.py      # Threads implementation
-│   ├── instagram_web.py    # Instagram implementation
-│   ├── facebook_web.py     # Facebook implementation
-│   ├── x_web.py            # X/Twitter implementation
-│   ├── line_web.py         # Line (placeholder)
-│   ├── whatsapp_web.py     # WhatsApp (placeholder)
-│   └── selectors.py        # CSS selectors for all platforms
-│
-└── data/                   # Runtime data
-    ├── browser_context/    # Persistent browser session
-    ├── bot.log             # Application logs
-    └── replied.db          # SQLite database
-```
-
----
-
-## 📋 Development TODO
-
-> **Development Roadmap** - Tracked features and planned work
-
-### Phase 1: Enhance Existing Platforms (Priority)
-
-- [ ] **Threads**: Official account auto-reply (notification monitoring)
-- [ ] **Instagram**: Official account auto-reply (comment monitoring)
-- [ ] **Facebook**: Official account auto-reply (page comment monitoring)
-- [ ] Add `get_notifications()` method to BaseAdapter
-- [ ] Add `reply_to_comment()` method to BaseAdapter
-
-### Phase 2: New Platform - Line
-
-- [ ] Line Web login (QR Code)
-- [ ] Line Voom feed scraping
-- [ ] Line reply functionality
-- [ ] Line CSS selectors
-
-### Phase 3: New Platform - WhatsApp (Last Priority)
-
-- [ ] WhatsApp Business API integration (official accounts only)
-- [ ] Webhook setup for incoming messages
-- [ ] Auto-reply via Business API
-- [ ] ⚠️ **NOT for personal accounts** - Business accounts only
-
----
-
 ## ⚠️ Disclaimer / Legal Notice ⚠️
 
 > **IMPORTANT: READ CAREFULLY BEFORE USE**
@@ -326,8 +321,6 @@ If you choose to use this software, please:
 - 🚫 Do not use for harassment or abuse
 - ⏱️ Use reasonable rate limits to avoid disrupting platforms
 
----
-
 **By using this software, you acknowledge that you have read, understood, and agree to all terms outlined in this disclaimer.**
 
 ---
@@ -337,6 +330,37 @@ If you choose to use this software, please:
 > ⚠️ **開發中** - 本專案目前處於早期開發階段。功能可能不完整、不穩定，或隨時可能有重大變更。**請自行承擔使用風險。**
 
 **Social Bot** 是一個自動化的社群媒體互動代理程式，旨在將社群小編的回文作業全數自動化進行。本專案利用 Playwright 並整合多種來源的大型語言模型服務供應商（OpenAI、Google Gemini、Ollama）來理解內容（包括貼文圖片的視覺分析）並自動生成回覆。
+
+---
+
+## 開發待辦清單
+
+> **開發路線圖** - 追蹤功能與計劃中的工作項目
+
+### 階段一：強化現有平台 ✅ 完成
+
+- [x] **Threads**：官方帳號自動回覆（通知監控）
+- [x] **Instagram**：官方帳號自動回覆（留言監控）
+- [x] **Facebook**：官方帳號自動回覆（粉專留言監控）
+- [x] 新增 `get_notifications()` 方法至 BaseAdapter
+- [x] 新增 `reply_to_comment()` 方法至 BaseAdapter
+- [x] 在 main.py 新增操作模式選擇（Feed Mode / Notification Mode）
+
+### 階段二：新平台 - Line
+
+- [ ] Line Web 登入（QR Code 掃碼）
+- [ ] Line Voom 動態抓取
+- [ ] Line 回覆功能
+- [ ] Line CSS Selectors
+
+### 階段三：新平台 - WhatsApp（最後優先）
+
+- [ ] WhatsApp Business API 整合（僅限官方帳號）
+- [ ] 設定訊息接收 Webhook
+- [ ] 透過 Business API 自動回覆
+- [ ] ⚠️ **不適用於私人帳號** - 僅限商業帳號
+
+---
 
 ## 目錄
 
@@ -509,34 +533,6 @@ HEADLESS=false                  # 設為 true 啟用無頭模式
 - 機器人會分析貼文並生成評論
 - **不會實際發佈任何評論**
 - 適合在正式使用前測試和驗證行為
-
----
-
-## 📋 開發待辦清單
-
-> **開發路線圖** - 追蹤功能與計劃中的工作項目
-
-### 階段一：強化現有平台（優先）
-
-- [ ] **Threads**：官方帳號自動回覆（通知監控）
-- [ ] **Instagram**：官方帳號自動回覆（留言監控）
-- [ ] **Facebook**：官方帳號自動回覆（粉專留言監控）
-- [ ] 新增 `get_notifications()` 方法至 BaseAdapter
-- [ ] 新增 `reply_to_comment()` 方法至 BaseAdapter
-
-### 階段二：新平台 - Line
-
-- [ ] Line Web 登入（QR Code 掃碼）
-- [ ] Line Voom 動態抓取
-- [ ] Line 回覆功能
-- [ ] Line CSS Selectors
-
-### 階段三：新平台 - WhatsApp（最後優先）
-
-- [ ] WhatsApp Business API 整合（僅限官方帳號）
-- [ ] 設定訊息接收 Webhook
-- [ ] 透過 Business API 自動回覆
-- [ ] ⚠️ **不適用於私人帳號** - 僅限商業帳號
 
 ---
 
