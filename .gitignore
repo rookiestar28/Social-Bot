@@ -1,3 +1,4 @@
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
@@ -19,15 +20,35 @@ wheels/
 .installed.cfg
 *.egg
 MANIFEST
+
+# Virtual Environment
 venv/
 .venv/
 env/
 .env/
+
+# IDE
 .vscode/
 .idea/
 *.swp
+
+# OS
 .DS_Store
+Thumbs.db
+desktop.ini
+
+# Environment Variables (CRITICAL - Contains API Keys)
 .env
+.env.*
+!.env.example
+
+# Data Directory (CRITICAL - Contains Sensitive Browser Sessions)
+data/browser_context/
+data/*.db
+data/*.log
+data/*.json
+
+# AI Model Files
 *.pt
 *.pth
 *.ckpt
@@ -35,12 +56,9 @@ env/
 *.safetensors
 *.onnx
 *.h5
+
+# Logs and Outputs
 wandb/
-data/
-datasets/
-outputs/
 logs/
 results/
-models/
-__init__.py
-!src/__init__.py
+outputs/

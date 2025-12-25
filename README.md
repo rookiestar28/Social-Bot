@@ -54,6 +54,7 @@
   - Rate limiting (configurable delays)
   - Dry-Run mode (simulation only, no actual posting)
   - Consecutive error handling with automatic stop
+- **Cross-Platform**: Optimized for Windows, macOS, and Linux environments.
 
 ## Architecture
 
@@ -94,26 +95,42 @@ Simply double-click `run.bat`.
 **For macOS / Linux:**
 Run the `start.sh` script from your terminal.
 
-1.  **Grant execution permission** (first time only):
+1. **Grant execution permission** (first time only):
+
     ```bash
     chmod +x start.sh
     ```
 
-2.  **Run the script**:
+2. **Run the script**:
+
     ```bash
     ./start.sh
     ```
 
 The script will automatically:
+
 - Create a virtual environment
 - Install all dependencies (requirements.txt)
 - Install Playwright browsers
 - Launch the Social Bot
 
-#### Option 2: Manual Setup
-... (Keep existing manual setup instructions)
+#### Option 2: Using start.sh (macOS/Linux)
 
-#### Option 2: Manual Setup
+1. Make the script executable:
+
+    ```bash
+    chmod +x start.sh
+    ```
+
+2. Run the script:
+
+    ```bash
+    ./start.sh
+    ```
+
+    It will handle virtual environment creation, dependencies, and startup.
+
+#### Option 3: Manual Setup
 
 1. **Create Virtual Environment**:
 
@@ -227,6 +244,34 @@ Social Bot/
 
 ---
 
+## 📋 Development TODO
+
+> **Development Roadmap** - Tracked features and planned work
+
+### Phase 1: Enhance Existing Platforms (Priority)
+
+- [ ] **Threads**: Official account auto-reply (notification monitoring)
+- [ ] **Instagram**: Official account auto-reply (comment monitoring)
+- [ ] **Facebook**: Official account auto-reply (page comment monitoring)
+- [ ] Add `get_notifications()` method to BaseAdapter
+- [ ] Add `reply_to_comment()` method to BaseAdapter
+
+### Phase 2: New Platform - Line
+
+- [ ] Line Web login (QR Code)
+- [ ] Line Voom feed scraping
+- [ ] Line reply functionality
+- [ ] Line CSS selectors
+
+### Phase 3: New Platform - WhatsApp (Last Priority)
+
+- [ ] WhatsApp Business API integration (official accounts only)
+- [ ] Webhook setup for incoming messages
+- [ ] Auto-reply via Business API
+- [ ] ⚠️ **NOT for personal accounts** - Business accounts only
+
+---
+
 ## ⚠️ Disclaimer / Legal Notice ⚠️
 
 > **IMPORTANT: READ CAREFULLY BEFORE USE**
@@ -329,6 +374,7 @@ If you choose to use this software, please:
   - 速率限制（可設定延遲）
   - 模擬執行模式（僅模擬，不實際發文）
   - 連續錯誤處理與自動停止
+- **跨平台支援**：針對 Windows、macOS 與 Linux 環境進行優化。
 
 ## 快速開始
 
@@ -350,23 +396,42 @@ If you choose to use this software, please:
 **macOS / Linux 使用者：**
 請在終端機執行 `start.sh` 腳本。
 
-1.  **給予執行權限**（僅首次需要）：
+1. **給予執行權限**（僅首次需要）：
+
     ```bash
     chmod +x start.sh
     ```
 
-2.  **執行腳本**：
+2. **執行腳本**：
+
     ```bash
     ./start.sh
     ```
 
 該腳本將自動執行以下動作：
+
 - 建立虛擬環境
 - 安裝所有依賴套件 (requirements.txt)
 - 安裝 Playwright 瀏覽器核心
 - 啟動 Social Bot 應用程式
 
-#### 方式二：手動設定
+#### 方式二：使用 start.sh（macOS/Linux）
+
+1. 賦予執行權限：
+
+    ```bash
+    chmod +x start.sh
+    ```
+
+2. 執行腳本：
+
+    ```bash
+    ./start.sh
+    ```
+
+    它會自動處理虛擬環境、依賴安裝與啟動。
+
+#### 方式三：手動設定
 
 1. **建立虛擬環境**：
 
@@ -447,9 +512,37 @@ HEADLESS=false                  # 設為 true 啟用無頭模式
 
 ---
 
+## 📋 開發待辦清單
+
+> **開發路線圖** - 追蹤功能與計劃中的工作項目
+
+### 階段一：強化現有平台（優先）
+
+- [ ] **Threads**：官方帳號自動回覆（通知監控）
+- [ ] **Instagram**：官方帳號自動回覆（留言監控）
+- [ ] **Facebook**：官方帳號自動回覆（粉專留言監控）
+- [ ] 新增 `get_notifications()` 方法至 BaseAdapter
+- [ ] 新增 `reply_to_comment()` 方法至 BaseAdapter
+
+### 階段二：新平台 - Line
+
+- [ ] Line Web 登入（QR Code 掃碼）
+- [ ] Line Voom 動態抓取
+- [ ] Line 回覆功能
+- [ ] Line CSS Selectors
+
+### 階段三：新平台 - WhatsApp（最後優先）
+
+- [ ] WhatsApp Business API 整合（僅限官方帳號）
+- [ ] 設定訊息接收 Webhook
+- [ ] 透過 Business API 自動回覆
+- [ ] ⚠️ **不適用於私人帳號** - 僅限商業帳號
+
+---
+
 ## ⚠️ 免責聲明 / 法律聲明 ⚠️
 
-> ** 重要：使用前請仔細閱讀**
+> **重要：使用前請仔細閱讀**
 
 ### 開發狀態
 
