@@ -62,3 +62,6 @@ wandb/
 logs/
 results/
 outputs/
+
+# Project Planning
+planning/
